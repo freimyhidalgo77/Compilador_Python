@@ -9,13 +9,50 @@ from Modelo import Token, TipoToken, Simbolo, TipoDato
 from Lexico import AnalizadorLexico
 from Sintactico import AnalizadorSintactico
 from Semantico import AnalizadorSemantico
+from prompt_toolkit import PromptSession
+from prompt_toolkit.key_binding import KeyBindings
 
 
-def leer_codigo_interactivo() -> str:
+def _leer_codigo_con_prompt_toolkit() -> str:
+    """
+    Editor multilínea real: permite moverse con las flechas (arriba/abajo/
+    izquierda/derecha), borrar con Backspace/Delete a través de líneas,
+    e insertar/editar libremente antes de compilar.
+
+    Enter inserta una nueva línea (como en cualquier editor de texto).
+    Para terminar y compilar: Esc y luego Enter (o Ctrl+D con el buffer vacío).
+    """
+
+    bindings = KeyBindings()
+
+    @bindings.add("escape", "enter")
+    def _finalizar(event):
+        event.current_buffer.validate_and_handle()
+
+    session = PromptSession(multiline=True, key_bindings=bindings)
+
+    print(f"\n{'='*60}")
+    print("MODO INTERACTIVO — Escribe tu código Pascal-like")
+    print("Muévete con las flechas y borra libremente con Backspace/Delete.")
+    print("Enter agrega una nueva línea.")
+    print("Para compilar: presiona Esc y luego Enter (o Ctrl+D).")
+    print(f"{'='*60}\n")
+
+    try:
+        fuente = session.prompt("")
+    except EOFError:
+        fuente = ""
+    return fuente
+
+
+def _leer_codigo_basico() -> str:
+    """Modo de respaldo (sin dependencias externas): línea por línea."""
     print(f"\n{'='*60}")
     print("MODO INTERACTIVO — Escribe tu código Pascal-like")
     print("Termina con una línea que diga: FIN")
     print("(o Ctrl+Z + Enter en Windows / Ctrl+D en Linux-Mac)")
+    print("Nota: instala 'prompt_toolkit' (pip install prompt_toolkit)")
+    print("para poder retroceder de línea y editar con las flechas.")
     print(f"{'='*60}\n")
 
     lineas = []
@@ -28,6 +65,13 @@ def leer_codigo_interactivo() -> str:
             break
         lineas.append(linea)
     return "\n".join(lineas)
+
+
+def leer_codigo_interactivo() -> str:
+    try:
+        return _leer_codigo_con_prompt_toolkit()
+    except ImportError:
+        return _leer_codigo_basico()
 
 
 def compilar(fuente: str, nombre: str = "(entrada interactiva)"):
@@ -104,6 +148,7 @@ def compilar(fuente: str, nombre: str = "(entrada interactiva)"):
         print(f"   Sintácticos/Semanticos (en línea): {len(sintactico.errores)}")
         print(f"   Semánticos (globales): {len(semantico.errores)}")
     print(f"{'='*60}\n")
+
 
 
 def main():
