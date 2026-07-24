@@ -130,6 +130,7 @@ def compilar(fuente: str, nombre: str = "(entrada interactiva)", mostrar_tabla_c
     print("FASE 3: ANÁLISIS SEMÁNTICO")
     print("-" * 40)
 
+
     semantico = AnalizadorSemantico(tokens, sintactico.tabla_simbolos)
     semantico.analizar()
 
