@@ -1,5 +1,5 @@
 """
-CAPA SINTACTICA — FASE 2 (sintactico)
+CAPA SINTACTICA — FASE 2 (sintactico puro)
 ─────────────────────────────────────────────────────────────
 """
 
@@ -61,7 +61,6 @@ class AnalizadorSintactico:
 
     # ==================== SENTENCIAS ====================
     def _parsear_declaracion(self):
-        """Punto de entrada para cualquier declaración/sentencia"""
         if self.pos >= len(self.tokens):
             return
             
@@ -110,7 +109,7 @@ class AnalizadorSintactico:
         self._avanzar()
 
     def _parsear_asignacion(self):
-        """Parsing de asignación: identificador := expresion ;"""
+        """Parsing de asignación - SOLO SINTÁCTICO, sin verificación de tipos"""
         id_tok = self._consumir(TipoToken.IDENTIFICADOR, 'identificador')
         if id_tok is None:
             return
@@ -120,14 +119,12 @@ class AnalizadorSintactico:
         self._consumir(TipoToken.PUNTO_COMA, '";"')
 
     def _parsear_encabezado_program(self):
-        """Encabezado opcional 'program nombre;'"""
         if self._es_reservada('program'):
             self._avanzar()
             self._consumir(TipoToken.IDENTIFICADOR, 'nombre de programa')
             self._consumir(TipoToken.PUNTO_COMA, '";"')
   
     def _parsear_punto_final(self):
-        """Punto final opcional '.' al final del programa"""
         if self.pos < len(self.tokens) and self._actual().valor == '.':
             self._avanzar()
 
@@ -138,7 +135,7 @@ class AnalizadorSintactico:
             self._parsear_grupo_var()
 
     def _parsear_grupo_var(self):
-        """Parsea un solo grupo: 'id (, id)* : tipo [:= expr] ;'"""
+        """Parsea grupo var - SOLO SINTÁCTICO, sin registro en tabla"""
         identificadores = [self._consumir(TipoToken.IDENTIFICADOR, 'identificador')]
         while self._actual().tipo == TipoToken.COMA:
             self._avanzar()
