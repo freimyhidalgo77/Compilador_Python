@@ -74,7 +74,20 @@ def leer_codigo_interactivo() -> str:
         return _leer_codigo_basico()
 
 
-def compilar(fuente: str, nombre: str = "(entrada interactiva)"):
+def compilar(fuente: str, nombre: str = "(entrada interactiva)", mostrar_tabla_consola: bool = True):
+    """
+    Ejecuta las 3 fases del compilador e imprime el progreso por consola.
+
+    mostrar_tabla_consola:
+        Si es True (uso normal por consola) imprime la tabla de simbolos
+        en ASCII como siempre. Si es False (uso desde la GUI), se omite
+        ese bloque porque la interfaz grafica va a dibujar su propia
+        tabla interactiva a partir del valor devuelto por esta funcion.
+
+    Devuelve un diccionario con los resultados de la compilacion para que
+    quien llame (la GUI, por ejemplo) pueda construir su propia
+    presentacion sin tener que volver a parsear el texto impreso.
+    """
     print(f"\n{'='*60}")
     print(f"COMPILADOR PASCAL-LIKE")
     print(f"Fuente: {nombre}")
@@ -128,13 +141,15 @@ def compilar(fuente: str, nombre: str = "(entrada interactiva)"):
     else:
         print("✓ Analisis semantico completado sin errores\n")
 
-    # Mostrar tabla de simbolos
-    print("TABLA DE SIMBOLOS FINAL:")
-    sintactico.tabla_simbolos.imprimir()
+    # Mostrar tabla de simbolos (solo en modo consola; la GUI la dibuja aparte)
+    if mostrar_tabla_consola:
+        print("TABLA DE SIMBOLOS FINAL:")
+        sintactico.tabla_simbolos.imprimir()
 
     # Resumen de simbolos por tipo
+    resumen_tipos = semantico.resumen_por_tipo()
     print("\nRESUMEN DE SIMBOLOS POR TIPO:")
-    for tipo, cantidad in semantico.resumen_por_tipo().items():
+    for tipo, cantidad in resumen_tipos.items():
         print(f"  {tipo}: {cantidad}")
 
     # Resumen final
@@ -149,6 +164,15 @@ def compilar(fuente: str, nombre: str = "(entrada interactiva)"):
         print(f"   Semánticos (globales): {len(semantico.errores)}")
     print(f"{'='*60}\n")
 
+    return {
+        "tokens": tokens,
+        "tabla_simbolos": sintactico.tabla_simbolos,
+        "errores_lexico": lexico.errores,
+        "errores_sintactico": sintactico.errores,
+        "errores_semantico": semantico.errores,
+        "resumen_tipos": resumen_tipos,
+        "total_errores": total_errores,
+    }
 
 
 def main():
