@@ -4,6 +4,13 @@ CAPA DE TABLA DE SIMBOLOS
 Reemplaza el diccionario plano `Dict[str, Symbol]` de la version original por una pila de
 ambitos (uno por cada bloque begin/end, funcion o for), igual que
 la pila de ArrayDeque<MutableMap<String, Simbolo>> de Kotlin.
+
+Ademas del stack de ambitos (que se vacia a medida que se cierran bloques),
+se mantiene un historial plano de TODOS los simbolos declarados durante
+toda la compilacion. Esto es necesario porque AnalizadorSemantico corre
+DESPUES de que AnalizadorSintactico ya cerro (salir_ambito()) los ambitos
+de funciones, for y begin..end -- si solo mirara _pila_ambitos, jamas
+podria detectar variables locales sin usar, porque ya no existirian ahi.
 """
 
 from typing import List, Dict, Optional
@@ -14,6 +21,7 @@ from Modelo import Simbolo
 class TablaSimbolos:
     def __init__(self):
         self._pila_ambitos: List[Dict[str, Simbolo]] = []
+        self._historial: List[Simbolo] = []
 
     def entrar_ambito(self):
         self._pila_ambitos.append({})
@@ -29,6 +37,7 @@ class TablaSimbolos:
         if s.nombre in ambito:
             return False
         ambito[s.nombre] = s
+        self._historial.append(s)
         return True
 
     def buscar(self, nombre: str) -> Optional[Simbolo]:
@@ -42,6 +51,11 @@ class TablaSimbolos:
             if nombre in ambito:
                 ambito[nombre].valor = valor
                 return
+
+    def obtener_historial(self) -> List[Simbolo]:
+        """Todos los simbolos declarados durante toda la compilacion,
+        incluyendo los de ambitos ya cerrados (funciones, for, begin..end)."""
+        return self._historial
 
     def imprimir(self):
         print("\n+----------------+----------+-----------+-------------+")

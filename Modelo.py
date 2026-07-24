@@ -39,7 +39,7 @@ class Token:
         return f'[{self.tipo.name} | "{self.valor}" | linea {self.linea}, columna {self.columna}]'
 
 
-# ==================== TIPOS Y SÍMBOLOS ====================
+# ==================== TIPOS Y SIMBOLOS ====================
 
 class TipoDato(Enum):
     INTEGER = auto()

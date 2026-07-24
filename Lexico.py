@@ -1,5 +1,5 @@
 """
-CAPA LÉXICA — FASE 1: ANALISIS LEXICO
+CAPA LEXICA — FASE 1: ANALISIS LEXICO
 ──────────────────────────────────────────────────────────────
 """
 
