@@ -17,6 +17,7 @@ class AnalizadorSemantico:
         self.pos = 0
         self._usos: Set[str] = set()
         self._declaraciones: Set[str] = set()
+        self.salida_ejecucion: List[str] = []   # NUEVO: lineas producidas por writeln/write
 
     def _err_sem(self, t: Token, mensaje: str):
         self.errores.append(ErrorCompilacion('SEMANTICO', t.linea, t.columna, mensaje))
@@ -41,17 +42,25 @@ class AnalizadorSemantico:
             # Buscar declaraciones var
             if t.tipo == TipoToken.RESERVADA and t.valor == 'var':
                 self._procesar_declaracion_var()
-            
+                continue
+
+            # Buscar llamadas a writeln / write
+            if t.tipo == TipoToken.IDENTIFICADOR and t.valor.lower() in ('writeln', 'write'):
+                self._procesar_writeln(t)
+                continue
+
             # Buscar asignaciones
-            elif t.tipo == TipoToken.IDENTIFICADOR:
+            if t.tipo == TipoToken.IDENTIFICADOR:
                 if self.pos + 1 < len(self.tokens):
                     siguiente = self.tokens[self.pos + 1]
                     if siguiente.tipo == TipoToken.ASIGNACION:
                         self._validar_asignacion(t)
+                        continue
             
             # Buscar condiciones if/while
-            elif t.tipo == TipoToken.RESERVADA and t.valor in ('if', 'while'):
+            if t.tipo == TipoToken.RESERVADA and t.valor in ('if', 'while'):
                 self._validar_condicion(t)
+                continue
             
             self.pos += 1
 
@@ -126,10 +135,18 @@ class AnalizadorSemantico:
         simb = self.tabla_simbolos.buscar(id_tok.valor)
         if simb is None:
             self._err_sem(id_tok, f'"{id_tok.valor}" no fue declarado')
+            self.pos += 2
+            self._parsear_expresion()
+            if self.pos < len(self.tokens) and self.tokens[self.pos].tipo == TipoToken.PUNTO_COMA:
+                self.pos += 1
             return
         
         if simb.es_constante:
             self._err_sem(id_tok, f'"{id_tok.valor}" es constante y no puede reasignarse')
+            self.pos += 2
+            self._parsear_expresion()
+            if self.pos < len(self.tokens) and self.tokens[self.pos].tipo == TipoToken.PUNTO_COMA:
+                self.pos += 1
             return
         
         # Saltar ':=' y analizar expresión
@@ -142,11 +159,16 @@ class AnalizadorSemantico:
                 self._err_sem(id_tok, 
                     f'no se puede asignar un valor de tipo {tipo_expr} a '
                     f'"{id_tok.valor}" declarada como {simb.tipo}')
+            else:
+                self.tabla_simbolos.actualizar(id_tok.valor, valor_expr)
         else:
             self.tabla_simbolos.actualizar(id_tok.valor, valor_expr)
         
         # Registrar uso
         self._usos.add(id_tok.valor)
+
+        if self.pos < len(self.tokens) and self.tokens[self.pos].tipo == TipoToken.PUNTO_COMA:
+            self.pos += 1
 
     def _validar_condicion(self, t: Token):
         """Valida que la condición sea booleana"""
@@ -154,6 +176,37 @@ class AnalizadorSemantico:
         tipo_cond, _ = self._parsear_expresion()
         if tipo_cond != TipoDato.BOOLEAN and tipo_cond != TipoDato.DESCONOCIDO:
             self._err_sem(t, f'la condicion de "{t.valor}" debe ser booleana, se recibio {tipo_cond}')
+
+    def _procesar_writeln(self, t: Token):
+        """Evalúa los argumentos de writeln/write y guarda el texto resultante
+        para que la interfaz pueda mostrarlo como salida del programa."""
+        self.pos += 1  # saltar 'writeln'/'write'
+        partes = []
+
+        if self.pos < len(self.tokens) and self.tokens[self.pos].tipo == TipoToken.PARENTESIS_A:
+            self.pos += 1
+            if self.pos < len(self.tokens) and self.tokens[self.pos].tipo != TipoToken.PARENTESIS_C:
+                tipo_val, valor = self._parsear_expresion()
+                partes.append(self._formatear_valor(valor))
+                while self.pos < len(self.tokens) and self.tokens[self.pos].tipo == TipoToken.COMA:
+                    self.pos += 1
+                    tipo_val, valor = self._parsear_expresion()
+                    partes.append(self._formatear_valor(valor))
+            if self.pos < len(self.tokens) and self.tokens[self.pos].tipo == TipoToken.PARENTESIS_C:
+                self.pos += 1
+
+        if self.pos < len(self.tokens) and self.tokens[self.pos].tipo == TipoToken.PUNTO_COMA:
+            self.pos += 1
+
+        self.salida_ejecucion.append(''.join(partes))
+
+    @staticmethod
+    def _formatear_valor(valor) -> str:
+        if valor is None:
+            return ''
+        if isinstance(valor, bool):
+            return 'true' if valor else 'false'
+        return str(valor)
 
     # ==================== EXPRESIONES (igual que antes pero con validaciones) ====================
     def _parsear_expresion(self) -> Tuple[TipoDato, Any]:

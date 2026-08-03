@@ -76,7 +76,7 @@ def leer_codigo_interactivo() -> str:
 
 def compilar(fuente: str, nombre: str = "(entrada interactiva)", mostrar_tabla_consola: bool = True):
     """
-    Ejecuta las 3 fases del compilador e imprime el progreso por consola.
+    Ejecuta las fases del compilador e imprime el progreso por consola.
 
     mostrar_tabla_consola:
         Si es True (uso normal por consola) imprime la tabla de simbolos
@@ -126,10 +126,9 @@ def compilar(fuente: str, nombre: str = "(entrada interactiva)", mostrar_tabla_c
     else:
         print("✓ Análisis sintáctico completado sin errores\n")
 
-    # FASE 3: ANALISIS SEMANTICO (verificaciones globales)
+    # FASE 3: ANALISIS SEMANTICO (verificaciones globales + evaluacion de expresiones)
     print("FASE 3: ANÁLISIS SEMÁNTICO")
     print("-" * 40)
-
 
     semantico = AnalizadorSemantico(tokens, sintactico.tabla_simbolos)
     semantico.analizar()
@@ -141,6 +140,22 @@ def compilar(fuente: str, nombre: str = "(entrada interactiva)", mostrar_tabla_c
         print()
     else:
         print("✓ Analisis semantico completado sin errores\n")
+
+    # Calculamos el total de errores ANTES de decidir si mostramos la salida del programa
+    total_errores = len(lexico.errores) + len(sintactico.errores) + len(semantico.errores)
+
+    # FASE 4: SALIDA DEL PROGRAMA (resultado de los writeln, ya evaluados en Semantico.py)
+    salida_ejecucion = getattr(semantico, "salida_ejecucion", [])
+    if total_errores == 0:
+        print("FASE 4: EJECUCIÓN")
+        print("-" * 40)
+        if salida_ejecucion:
+            print("Salida del programa:")
+            for linea in salida_ejecucion:
+                print(f"  {linea}")
+        else:
+            print("(el programa no generó salida por consola)")
+        print()
 
     # Mostrar tabla de simbolos (solo en modo consola; la GUI la dibuja aparte)
     if mostrar_tabla_consola:
@@ -155,7 +170,6 @@ def compilar(fuente: str, nombre: str = "(entrada interactiva)", mostrar_tabla_c
 
     # Resumen final
     print(f"\n{'='*60}")
-    total_errores = len(lexico.errores) + len(sintactico.errores) + len(semantico.errores)
     if total_errores == 0:
         print("✅ COMPILACION EXITOSA - Sin errores")
     else:
@@ -171,6 +185,7 @@ def compilar(fuente: str, nombre: str = "(entrada interactiva)", mostrar_tabla_c
         "errores_lexico": lexico.errores,
         "errores_sintactico": sintactico.errores,
         "errores_semantico": semantico.errores,
+        "salida_ejecucion": salida_ejecucion,
         "resumen_tipos": resumen_tipos,
         "total_errores": total_errores,
     }
